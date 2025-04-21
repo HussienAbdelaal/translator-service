@@ -2,24 +2,35 @@ package repo
 
 import (
 	"context"
-	"translator/db"
 	model "translator/models"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func AddTranscription(transcription model.TranscriptionRecord) {
+type TranscriptionRepo struct {
+	db *pgxpool.Pool
+}
+
+func NewTranscriptionRepo(db *pgxpool.Pool) *TranscriptionRepo {
+	return &TranscriptionRepo{
+		db: db,
+	}
+}
+
+func (r *TranscriptionRepo) Create(ctx context.Context, t model.TranscriptionRecord) {
 	// Insert the transcription into the database
-	_, err := db.DB.Exec(
-		context.TODO(),
+	_, err := r.db.Exec(
+		ctx,
 		"INSERT INTO translation (hash, text, translation) VALUES ($1, $2, $3)",
-		transcription.Hash, transcription.Text, transcription.Translation)
+		t.Hash, t.Text, t.Translation)
 	if err != nil {
 		panic(err.Error())
 	}
 }
 
-func GetTranscriptionByHash(hash string) (model.TranscriptionRecord, bool) {
-	row := db.DB.QueryRow(
-		context.TODO(),
+func (r *TranscriptionRepo) Get(ctx context.Context, hash string) (model.TranscriptionRecord, bool) {
+	row := r.db.QueryRow(
+		ctx,
 		"SELECT hash, text, translation FROM translation WHERE hash = $1", hash)
 
 	// Scan the row into a TranscriptionRecord
@@ -36,11 +47,11 @@ func GetTranscriptionByHash(hash string) (model.TranscriptionRecord, bool) {
 	return transcription, true
 }
 
-func GetAllTranscriptions() []model.TranscriptionRecord {
+func (r *TranscriptionRepo) GetAll(ctx context.Context) []model.TranscriptionRecord {
 	// Get all transcriptions from the database
 	// Print a message indicating a database query is being attempted
-	rows, err := db.DB.Query(
-		context.TODO(),
+	rows, err := r.db.Query(
+		ctx,
 		"SELECT hash, text, translation FROM translation")
 	if err != nil {
 		// Print an error message if the query fails

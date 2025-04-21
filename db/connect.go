@@ -3,24 +3,30 @@ package db
 import (
 	"context"
 	"log"
-	"os"
+	"time"
+	"translator/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var DB *pgxpool.Pool // shared global pool
-
-func Init() {
-	dsn := os.Getenv("DATABASE_URL")
+func NewDBPool(config config.DBConfig) *pgxpool.Pool {
+	dsn := config.GetDSN()
 	if dsn == "" {
-		dsn = "<REDACTED>"
+		log.Fatal("DATABASE_CONFIG is required but not found in environment variables")
 	}
-	log.Printf("Connecting to database with DSN: %s", dsn)
-	pool, err := pgxpool.New(context.Background(), dsn)
-	if err != nil {
-		log.Fatalf("Unable to connect to DB: %v", err)
-	}
-	log.Println("Connected to the database successfully")
 
-	DB = pool
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v", err)
+	}
+
+	// Ping to ensure it's valid
+	if err := pool.Ping(ctx); err != nil {
+		log.Fatalf("Unable to ping database: %v", err)
+	}
+
+	return pool
 }
