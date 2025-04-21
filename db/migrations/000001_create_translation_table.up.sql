@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS translation(
+   hash CHAR(64) PRIMARY KEY,
+   text TEXT NOT NULL,
+   translation TEXT NOT NULL,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

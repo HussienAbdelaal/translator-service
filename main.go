@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	db "translator/db"
 	model "translator/models"
 	openai "translator/openai"
 	repo "translator/repo"
@@ -16,6 +17,9 @@ func main() {
 	router.GET("/transcriptions", getTranscriptionRecords)
 	router.POST("/transcriptions", addTranscription)
 	router.POST("/translate", translate)
+
+	// Initialize the database connection
+	db.Init()
 
 	router.Run("0.0.0.0:8080")
 }
