@@ -53,7 +53,7 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 	// If there are new transcriptions, process them
 	if len(transcriptionSet.New) > 0 {
 		// Create a batch collection from the new transcriptions
-		batchCollection := NewBatchCollection(transcriptionSet.New)
+		batchCollection := NewBatchCollection(s.openaiService.batchSize, transcriptionSet.New)
 
 		// translate batches
 		for _, batch := range batchCollection.Batches {

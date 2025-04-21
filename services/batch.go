@@ -1,15 +1,16 @@
-package model
+package service
 
 import (
 	"encoding/json"
+	model "translator/models"
 	"unicode/utf8"
 )
 
 type Batch struct {
-	Transcriptions []Transcription
+	Transcriptions []model.Transcription
 }
 
-func (b *Batch) AddTranscription(transcription Transcription) {
+func (b *Batch) AddTranscription(transcription model.Transcription) {
 	b.Transcriptions = append(b.Transcriptions, transcription)
 }
 
