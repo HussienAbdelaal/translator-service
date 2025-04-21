@@ -1,4 +1,4 @@
-package openai
+package service
 
 import (
 	"context"

@@ -18,14 +18,14 @@ func NewTranslateHandler(translateService service.TranslateService) *TranslateHa
 	}
 }
 
-func (h *TranslateHandler) GetAllTranscriptions(c *gin.Context) {
-	// Call the TranslateService to get all transcriptions
-	transcriptions := h.translateService.GetAll(c)
-	if transcriptions == nil {
-		c.JSON(http.StatusOK, gin.H{"message": "No transcriptions found"})
+func (h *TranslateHandler) GetAllTranslations(c *gin.Context) {
+	// Call the TranslateService to get all translations
+	translations := h.translateService.GetAll(c)
+	if translations == nil {
+		c.JSON(http.StatusOK, gin.H{"message": "No translations found"})
 		return
 	}
-	c.JSON(http.StatusOK, transcriptions)
+	c.JSON(http.StatusOK, translations)
 }
 
 func (h *TranslateHandler) Translate(c *gin.Context) {

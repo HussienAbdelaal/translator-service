@@ -3,16 +3,15 @@ package service
 import (
 	"context"
 	model "translator/models"
-	openai "translator/openai"
 	repo "translator/repo"
 )
 
 type TranslateService struct {
-	transRepo     repo.TranscriptionRepo
-	openaiService openai.OpenAIService
+	transRepo     repo.TranslationRepo
+	openaiService OpenAIService
 }
 
-func NewTranslateService(transRepo repo.TranscriptionRepo, openaiService openai.OpenAIService) *TranslateService {
+func NewTranslateService(transRepo repo.TranslationRepo, openaiService OpenAIService) *TranslateService {
 	return &TranslateService{
 		transRepo:     transRepo,
 		openaiService: openaiService,
