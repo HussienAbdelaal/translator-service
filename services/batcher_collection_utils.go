@@ -1,10 +1,8 @@
 package service
 
 import (
-	"fmt"
 	"slices"
 	model "translator/models"
-	"unicode/utf8"
 )
 
 // Split transcriptions bigger than maxSize into smaller ones
@@ -12,8 +10,7 @@ import (
 // also updates the originMapping
 func (b *BatchCollection) normalizeTranscriptions(transcriptions []model.Transcription) []model.Transcription {
 	normalized := []model.Transcription{}
-	for i, transcription := range transcriptions {
-		fmt.Printf("Transcription %d: %v  Size: %d\n", i+1, transcription, utf8.RuneCountInString(transcription.Text))
+	for _, transcription := range transcriptions {
 		// check if transcription needs to be split
 		if transcription.GetTextSize() > b.MaxSize {
 			// Split the transcription into smaller transcriptions and keep track of the IDs

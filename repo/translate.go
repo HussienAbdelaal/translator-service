@@ -49,12 +49,10 @@ func (r *TranslationRepo) Get(ctx context.Context, hash string) (model.Transcrip
 
 func (r *TranslationRepo) GetAll(ctx context.Context) []model.TranscriptionRecord {
 	// Get all translations from the database
-	// Print a message indicating a database query is being attempted
 	rows, err := r.db.Query(
 		ctx,
 		"SELECT hash, text, translation FROM translation")
 	if err != nil {
-		// Print an error message if the query fails
 		panic(err.Error())
 	}
 	defer rows.Close()

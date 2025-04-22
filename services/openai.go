@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"translator/config"
 
@@ -21,6 +22,7 @@ type OpenAIService struct {
 func NewOpenAIService(cfg config.OpenAIConfig) *OpenAIService {
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
+		option.WithMaxRetries(3),
 	)
 
 	// Set default values for model, temperature, and batch size
@@ -28,24 +30,6 @@ func NewOpenAIService(cfg config.OpenAIConfig) *OpenAIService {
 	if model == "" {
 		model = "gpt-4o-mini"
 	}
-	// // TODO: Validate the model name against OpenAI's available models
-	// // Use OpenAI SDK to validate the model name
-	// modelsList, err := client.Models.List(context.TODO())
-	// if err != nil {
-	// 	panic(fmt.Sprintf("Failed to fetch models list: %v", err))
-	// }
-
-	// isValidModel := false
-	// for _, m := range modelsList.Data {
-	// 	if m.ID == model {
-	// 		isValidModel = true
-	// 		break
-	// 	}
-	// }
-
-	// if !isValidModel {
-	// 	panic(fmt.Sprintf("Invalid model name: %s", model))
-	// }
 
 	temperature := cfg.Temperature
 	if temperature == "" {
@@ -91,7 +75,7 @@ func (s *OpenAIService) Translate(ctx context.Context, text string) string {
 	}
 
 	// print usage
-	fmt.Printf("Usage total tokens: %v\n", chatCompletion.Usage.TotalTokens)
+	log.Printf("Usage total tokens: %v\n", chatCompletion.Usage.TotalTokens)
 
 	return chatCompletion.Choices[0].Message.Content
 }

@@ -1,9 +1,7 @@
 package service
 
 import (
-	"fmt"
 	model "translator/models"
-	"unicode/utf8"
 )
 
 type BatchCollection struct {
@@ -20,13 +18,11 @@ func NewBatchCollection(maxSize int, transcriptions []model.Transcription) Batch
 	}
 	currentBatch := Batch{}
 
-	fmt.Println("Splitting bigger transcriptions first")
 	normalizedT := batches.normalizeTranscriptions(transcriptions)
 
 	// Now process the normalized transcriptions into batches
-	fmt.Println("Processing normalizedT transcriptions into batches")
-	for i, norm := range normalizedT {
-		fmt.Printf("Normalized Transcription %d: %v  New Size: %d\n", i+1, norm, utf8.RuneCountInString(norm.Text))
+	for _, norm := range normalizedT {
+		// log.Printf("Normalized Transcription %d: %v  New Size: %d\n", i+1, norm, utf8.RuneCountInString(norm.Text))
 
 		// check if current batch + next transcription exceeds max size
 		if currentBatch.GetTextSize() > 0 && currentBatch.GetTextSize()+norm.GetTextSize() > maxSize {

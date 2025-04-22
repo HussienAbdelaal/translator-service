@@ -50,7 +50,6 @@ func (b *Batch) MapTranslations(payloads []string) {
 	for i := 0; i < len(payloads); i++ {
 		b.Transcriptions[i].Translation = payloads[i]
 	}
-	// fmt.Printf("Mapped Translations: %v\n", b.Transcriptions)
 }
 
 func (b *Batch) GetNumberOfTranscriptions() int {

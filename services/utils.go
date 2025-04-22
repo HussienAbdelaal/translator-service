@@ -9,7 +9,6 @@ func SplitBySeparator(text string) []string {
 	runes := []rune(text)
 	currentString := ""
 	for i := 0; i < len(runes); i++ {
-		// fmt.Printf("Rune %v is '%c'\n", i, runes[i])
 		currentString += string(runes[i])
 		for _, sep := range separators {
 			if runes[i] == rune(sep[0]) {
