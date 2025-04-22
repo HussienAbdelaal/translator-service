@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"translator/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewDBPool(config config.DBConfig) (*pgxpool.Pool, error) {
+type DBConfig interface {
+	GetDSN() string
+}
+
+func NewDBPool(config DBConfig) (*pgxpool.Pool, error) {
 	dsn := config.GetDSN()
 	if dsn == "" {
 		return nil, fmt.Errorf("database dsn is required but not found in config")

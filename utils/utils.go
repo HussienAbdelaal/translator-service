@@ -1,4 +1,9 @@
-package service
+package utils
+
+import (
+	"crypto/sha256"
+	"fmt"
+)
 
 var separators = []string{".", ",", "?", "!", ";", "\n"}
 
@@ -22,4 +27,11 @@ func SplitBySeparator(text string) []string {
 		result = append(result, currentString)
 	}
 	return result
+}
+
+// Generate a sha256 hash for the given text
+func GenerateHash(text string) string {
+	h := sha256.New()
+	h.Write([]byte(text))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }

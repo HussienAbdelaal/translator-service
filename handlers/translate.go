@@ -1,18 +1,23 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	model "translator/models"
-	service "translator/services"
 
 	"github.com/gin-gonic/gin"
 )
 
-type TranslateHandler struct {
-	translateService service.TranslateService
+type TranslateService interface {
+	GetAll(c context.Context) ([]model.TranscriptionRecord, error)
+	Translate(c context.Context, inputs []model.TranscriptionDTO) ([]model.TranscriptionDTO, error)
 }
 
-func NewTranslateHandler(translateService service.TranslateService) *TranslateHandler {
+type TranslateHandler struct {
+	translateService TranslateService
+}
+
+func NewTranslateHandler(translateService TranslateService) *TranslateHandler {
 	return &TranslateHandler{
 		translateService: translateService,
 	}

@@ -1,4 +1,4 @@
-package service
+package client
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/openai/openai-go/option"
 )
 
-type OpenAIService struct {
+type OpenAIClient struct {
 	config      *config.OpenAIConfig
 	client      *openai.Client
 	model       string
@@ -19,7 +19,7 @@ type OpenAIService struct {
 	batchSize   int
 }
 
-func NewOpenAIService(cfg config.OpenAIConfig) (*OpenAIService, error) {
+func NewOpenAIService(cfg config.OpenAIConfig) (*OpenAIClient, error) {
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
 		option.WithMaxRetries(3),
@@ -51,7 +51,7 @@ func NewOpenAIService(cfg config.OpenAIConfig) (*OpenAIService, error) {
 		return nil, fmt.Errorf("invalid batch size: %s", batchSize)
 	}
 
-	return &OpenAIService{
+	return &OpenAIClient{
 		config:      &cfg,
 		client:      &client,
 		model:       model,
@@ -60,7 +60,7 @@ func NewOpenAIService(cfg config.OpenAIConfig) (*OpenAIService, error) {
 	}, nil
 }
 
-func (s *OpenAIService) Translate(ctx context.Context, text string) (string, error) {
+func (s *OpenAIClient) Translate(ctx context.Context, text string) (string, error) {
 	client := *s.client
 	chatCompletion, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
@@ -78,4 +78,8 @@ func (s *OpenAIService) Translate(ctx context.Context, text string) (string, err
 	log.Printf("Usage total tokens: %v\n", chatCompletion.Usage.TotalTokens)
 
 	return chatCompletion.Choices[0].Message.Content, nil
+}
+
+func (s *OpenAIClient) GetBatchSize() int {
+	return s.batchSize
 }

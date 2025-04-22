@@ -5,14 +5,22 @@ import (
 	"fmt"
 	model "translator/models"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	pgxV5 "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type TranslationRepo struct {
-	db *pgxpool.Pool
+type DBPool interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgxV5.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgxV5.Rows, error)
+	Close()
 }
 
-func NewTranslationRepo(db *pgxpool.Pool) *TranslationRepo {
+type TranslationRepo struct {
+	db DBPool
+}
+
+func NewTranslationRepo(db DBPool) *TranslationRepo {
 	return &TranslationRepo{
 		db: db,
 	}

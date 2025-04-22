@@ -1,8 +1,7 @@
 package model
 
 import (
-	"crypto/sha256"
-	"fmt"
+	"translator/utils"
 	"unicode/utf8"
 )
 
@@ -32,16 +31,12 @@ func NewTranscription(text string, speaker string, time string) *Transcription {
 	t.Speaker = speaker
 	t.Time = time
 	t.Translation = ""
-	h := sha256.New()
-	h.Write([]byte(t.Text))
-	t.Hash = fmt.Sprintf("%x", h.Sum(nil))
+	t.Hash = utils.GenerateHash(t.Text)
 	return t
 }
 
 func (t *Transcription) GenerateHash() {
-	h := sha256.New()
-	h.Write([]byte(t.Text))
-	t.Hash = fmt.Sprintf("%x", h.Sum(nil))
+	t.Hash = utils.GenerateHash(t.Text)
 }
 
 func (t *Transcription) GetTextSize() int {

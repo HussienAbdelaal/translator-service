@@ -3,6 +3,7 @@ package service
 import (
 	"slices"
 	model "translator/models"
+	"translator/utils"
 )
 
 // Split transcriptions bigger than maxSize into smaller ones
@@ -15,7 +16,7 @@ func (b *BatchCollection) normalizeTranscriptions(transcriptions []model.Transcr
 		if transcription.GetTextSize() > b.MaxSize {
 			// Split the transcription into smaller transcriptions and keep track of the IDs
 			// NOTE: if the transcription can't be split, it will be added as is
-			textSlices := SplitBySeparator(transcription.Text)
+			textSlices := utils.SplitBySeparator(transcription.Text)
 			for _, text := range textSlices {
 				part := *model.NewTranscription(text, transcription.Speaker, transcription.Time)
 				normalized = append(normalized, part)

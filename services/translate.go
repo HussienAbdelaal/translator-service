@@ -4,24 +4,34 @@ import (
 	"context"
 	mapper "translator/mappers"
 	model "translator/models"
-	repo "translator/repo"
 )
 
-type TranslateService struct {
-	transRepo     repo.TranslationRepo
-	openaiService OpenAIService
+type TranslateClient interface {
+	Translate(ctx context.Context, prompt string) (string, error)
+	GetBatchSize() int
 }
 
-func NewTranslateService(transRepo repo.TranslationRepo, openaiService OpenAIService) *TranslateService {
+type TranslateRepo interface {
+	Get(ctx context.Context, hash string) (*model.TranscriptionRecord, error)
+	Create(ctx context.Context, t model.TranscriptionRecord) error
+	GetAll(ctx context.Context) ([]model.TranscriptionRecord, error)
+}
+
+type TranslateService struct {
+	translateRepo   TranslateRepo
+	translateClient TranslateClient
+}
+
+func NewTranslateService(translateRepo TranslateRepo, translateClient TranslateClient) *TranslateService {
 	return &TranslateService{
-		transRepo:     transRepo,
-		openaiService: openaiService,
+		translateRepo:   translateRepo,
+		translateClient: translateClient,
 	}
 }
 
 func (s *TranslateService) GetAll(ctx context.Context) ([]model.TranscriptionRecord, error) {
 	// Get all transcriptions from the repository
-	transcriptions, err := s.transRepo.GetAll(ctx)
+	transcriptions, err := s.translateRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +43,7 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 	for _, input := range inputs {
 		transcription := *model.NewTranscription(input.Sentence, input.Speaker, input.Time)
 		// check which transcriptions already exists
-		existingTranscription, err := s.transRepo.Get(ctx, transcription.Hash)
+		existingTranscription, err := s.translateRepo.Get(ctx, transcription.Hash)
 		if err != nil {
 			return nil, err
 		}
@@ -60,12 +70,13 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 	// If there are new transcriptions, process them
 	if len(transcriptionSet.New) > 0 {
 		// Create a batch collection from the new transcriptions
-		batchCollection := NewBatchCollection(s.openaiService.batchSize, transcriptionSet.New)
+		batchSize := s.translateClient.GetBatchSize()
+		batchCollection := NewBatchCollection(batchSize, transcriptionSet.New)
 
 		// translate batches
 		for _, batch := range batchCollection.Batches {
 			prompt, _ := batch.BuildPrompt()
-			translatedText, err := s.openaiService.Translate(ctx, prompt)
+			translatedText, err := s.translateClient.Translate(ctx, prompt)
 			if err != nil {
 				// fail fast if any translation fails
 				return nil, err
@@ -84,7 +95,7 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 			resultDTOs = append(resultDTOs, mapper.MapTranscriptionToDTO(transcription))
 			// Add the new transcriptions to the repository
 			record := mapper.MapTranscriptionToRecord(transcription)
-			s.transRepo.Create(ctx, record)
+			s.translateRepo.Create(ctx, record)
 		}
 	}
 	return resultDTOs, nil

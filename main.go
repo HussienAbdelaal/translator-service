@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	client "translator/clients"
 	config "translator/config"
 	db "translator/db"
 	handler "translator/handlers"
@@ -18,22 +19,22 @@ func main() {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
 	// Initialize database connection
-	db, err := db.NewDBPool(cfg.DB)
+	db, err := db.NewDBPool(&cfg.DB)
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect to database: %v", err))
 	}
 	defer db.Close()
 	// Initialize OpenAI client
-	openAIService, err := service.NewOpenAIService(cfg.OpenAI)
+	openAIService, err := client.NewOpenAIService(cfg.OpenAI)
 	if err != nil {
 		panic(fmt.Sprintf("failed to initialize OpenAI service: %v", err))
 	}
 	// Initialize transcription repository
 	repo := repo.NewTranslationRepo(db)
 	// Initialize transcription service
-	transcriptionService := service.NewTranslateService(*repo, *openAIService)
+	transcriptionService := service.NewTranslateService(repo, openAIService)
 	// Initialize transcription handler
-	handler := handler.NewTranslateHandler(*transcriptionService)
+	handler := handler.NewTranslateHandler(transcriptionService)
 
 	router := gin.Default()
 	router.GET("/translations", handler.GetAllTranslations)
