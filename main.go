@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	client "translator/clients"
 	config "translator/config"
-	db "translator/db"
+	"translator/container"
 	handler "translator/handlers"
-	repo "translator/repo"
-	service "translator/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,23 +15,10 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
-	// Initialize database connection
-	db, err := db.NewDBPool(&cfg.DB)
-	if err != nil {
-		panic(fmt.Sprintf("failed to connect to database: %v", err))
-	}
-	defer db.Close()
-	// Initialize OpenAI client
-	openAIService, err := client.NewOpenAIService(cfg.OpenAI)
-	if err != nil {
-		panic(fmt.Sprintf("failed to initialize OpenAI service: %v", err))
-	}
-	// Initialize transcription repository
-	repo := repo.NewTranslationRepo(db)
-	// Initialize transcription service
-	transcriptionService := service.NewTranslateService(repo, openAIService)
-	// Initialize transcription handler
-	handler := handler.NewTranslateHandler(transcriptionService)
+	// Initialize dependency container
+	container := container.NewContainer(cfg)
+	defer container.Close()
+	handler := handler.NewTranslateHandler(container.TranscriptionService)
 
 	router := gin.Default()
 	router.GET("/translations", handler.GetAllTranslations)

@@ -19,7 +19,7 @@ type OpenAIClient struct {
 	batchSize   int
 }
 
-func NewOpenAIService(cfg config.OpenAIConfig) (*OpenAIClient, error) {
+func NewOpenAIClient(cfg config.OpenAIConfig) (*OpenAIClient, error) {
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
 		option.WithMaxRetries(3),
