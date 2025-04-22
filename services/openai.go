@@ -19,7 +19,7 @@ type OpenAIService struct {
 	batchSize   int
 }
 
-func NewOpenAIService(cfg config.OpenAIConfig) *OpenAIService {
+func NewOpenAIService(cfg config.OpenAIConfig) (*OpenAIService, error) {
 	client := openai.NewClient(
 		option.WithAPIKey(cfg.APIKey),
 		option.WithMaxRetries(3),
@@ -38,7 +38,7 @@ func NewOpenAIService(cfg config.OpenAIConfig) *OpenAIService {
 	// Convert temperature to float64
 	temperatureFloat, err := strconv.ParseFloat(temperature, 64)
 	if err != nil {
-		panic(fmt.Sprintf("Invalid temperature: %s", temperature))
+		return nil, fmt.Errorf("invalid temperature: %s", temperature)
 	}
 
 	batchSize := cfg.BatchSize
@@ -48,7 +48,7 @@ func NewOpenAIService(cfg config.OpenAIConfig) *OpenAIService {
 	// Convert batch size to int
 	batchSizeInt, err := strconv.Atoi(batchSize)
 	if err != nil {
-		panic(fmt.Sprintf("Invalid batch size: %s", batchSize))
+		return nil, fmt.Errorf("invalid batch size: %s", batchSize)
 	}
 
 	return &OpenAIService{
@@ -57,10 +57,10 @@ func NewOpenAIService(cfg config.OpenAIConfig) *OpenAIService {
 		model:       model,
 		temperature: temperatureFloat,
 		batchSize:   batchSizeInt,
-	}
+	}, nil
 }
 
-func (s *OpenAIService) Translate(ctx context.Context, text string) string {
+func (s *OpenAIService) Translate(ctx context.Context, text string) (string, error) {
 	client := *s.client
 	chatCompletion, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
@@ -71,11 +71,11 @@ func (s *OpenAIService) Translate(ctx context.Context, text string) string {
 		Temperature: openai.Float(s.temperature),
 	})
 	if err != nil {
-		panic(err.Error())
+		return "", err
 	}
 
 	// print usage
 	log.Printf("Usage total tokens: %v\n", chatCompletion.Usage.TotalTokens)
 
-	return chatCompletion.Choices[0].Message.Content
+	return chatCompletion.Choices[0].Message.Content, nil
 }

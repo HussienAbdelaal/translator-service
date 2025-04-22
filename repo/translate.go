@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	model "translator/models"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,18 +18,19 @@ func NewTranslationRepo(db *pgxpool.Pool) *TranslationRepo {
 	}
 }
 
-func (r *TranslationRepo) Create(ctx context.Context, t model.TranscriptionRecord) {
+func (r *TranslationRepo) Create(ctx context.Context, t model.TranscriptionRecord) error {
 	// Insert the translation into the database
 	_, err := r.db.Exec(
 		ctx,
 		"INSERT INTO translation (hash, text, translation) VALUES ($1, $2, $3)",
 		t.Hash, t.Text, t.Translation)
 	if err != nil {
-		panic(err.Error())
+		return fmt.Errorf("failed to insert translation: %w", err)
 	}
+	return nil
 }
 
-func (r *TranslationRepo) Get(ctx context.Context, hash string) (model.TranscriptionRecord, bool) {
+func (r *TranslationRepo) Get(ctx context.Context, hash string) (*model.TranscriptionRecord, error) {
 	row := r.db.QueryRow(
 		ctx,
 		"SELECT hash, text, translation FROM translation WHERE hash = $1", hash)
@@ -38,22 +40,23 @@ func (r *TranslationRepo) Get(ctx context.Context, hash string) (model.Transcrip
 	err := row.Scan(&transcription.Hash, &transcription.Text, &transcription.Translation)
 
 	if err != nil {
+		// TODO: catch this error properly
 		if err.Error() == "no rows in result set" {
 			// If no rows were found, return an empty TranscriptionRecord and false
-			return model.TranscriptionRecord{}, false
+			return nil, nil
 		}
 		panic(err.Error())
 	}
-	return transcription, true
+	return &transcription, nil
 }
 
-func (r *TranslationRepo) GetAll(ctx context.Context) []model.TranscriptionRecord {
+func (r *TranslationRepo) GetAll(ctx context.Context) ([]model.TranscriptionRecord, error) {
 	// Get all translations from the database
 	rows, err := r.db.Query(
 		ctx,
 		"SELECT hash, text, translation FROM translation")
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 	defer rows.Close()
 	// Create a slice to hold the transcriptions
@@ -63,9 +66,9 @@ func (r *TranslationRepo) GetAll(ctx context.Context) []model.TranscriptionRecor
 		var transcription model.TranscriptionRecord
 		err := rows.Scan(&transcription.Hash, &transcription.Text, &transcription.Translation)
 		if err != nil {
-			panic(err.Error())
+			return nil, err
 		}
 		transcriptions = append(transcriptions, transcription)
 	}
-	return transcriptions
+	return transcriptions, nil
 }

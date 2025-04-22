@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	config "translator/config"
 	db "translator/db"
 	handler "translator/handlers"
@@ -12,12 +13,21 @@ import (
 
 func main() {
 	// Load configuration
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		panic(fmt.Sprintf("failed to load config: %v", err))
+	}
 	// Initialize database connection
-	db := db.NewDBPool(cfg.DB)
+	db, err := db.NewDBPool(cfg.DB)
+	if err != nil {
+		panic(fmt.Sprintf("failed to connect to database: %v", err))
+	}
 	defer db.Close()
 	// Initialize OpenAI client
-	openAIService := service.NewOpenAIService(cfg.OpenAI)
+	openAIService, err := service.NewOpenAIService(cfg.OpenAI)
+	if err != nil {
+		panic(fmt.Sprintf("failed to initialize OpenAI service: %v", err))
+	}
 	// Initialize transcription repository
 	repo := repo.NewTranslationRepo(db)
 	// Initialize transcription service

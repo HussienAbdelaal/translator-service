@@ -20,7 +20,11 @@ func NewTranslateHandler(translateService service.TranslateService) *TranslateHa
 
 func (h *TranslateHandler) GetAllTranslations(c *gin.Context) {
 	// Call the TranslateService to get all translations
-	translations := h.translateService.GetAll(c)
+	translations, err := h.translateService.GetAll(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	if translations == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "No translations found"})
 		return

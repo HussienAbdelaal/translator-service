@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	mapper "translator/mappers"
 	model "translator/models"
 	repo "translator/repo"
 )
@@ -18,10 +19,13 @@ func NewTranslateService(transRepo repo.TranslationRepo, openaiService OpenAISer
 	}
 }
 
-func (s *TranslateService) GetAll(ctx context.Context) []model.TranscriptionRecord {
+func (s *TranslateService) GetAll(ctx context.Context) ([]model.TranscriptionRecord, error) {
 	// Get all transcriptions from the repository
-	transcriptions := s.transRepo.GetAll(ctx)
-	return transcriptions
+	transcriptions, err := s.transRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return transcriptions, nil
 }
 
 func (s *TranslateService) Translate(ctx context.Context, inputs []model.TranscriptionDTO) ([]model.TranscriptionDTO, error) {
@@ -29,8 +33,11 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 	for _, input := range inputs {
 		transcription := *model.NewTranscription(input.Sentence, input.Speaker, input.Time)
 		// check which transcriptions already exists
-		existingTranscription, exists := s.transRepo.Get(ctx, transcription.Hash)
-		if exists {
+		existingTranscription, err := s.transRepo.Get(ctx, transcription.Hash)
+		if err != nil {
+			return nil, err
+		}
+		if existingTranscription != nil {
 			// if exists, add the existing transcription
 			transcription.Translation = existingTranscription.Translation
 			transcriptionSet.Existing = append(transcriptionSet.Existing, transcription)
@@ -45,7 +52,7 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 	if len(transcriptionSet.Existing) > 0 {
 		// If there are existing transcriptions, add them to the result
 		for _, transcription := range transcriptionSet.Existing {
-			dto := MapTranscriptionToDTO(transcription)
+			dto := mapper.MapTranscriptionToDTO(transcription)
 			resultDTOs = append(resultDTOs, dto)
 		}
 	}
@@ -58,18 +65,25 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 		// translate batches
 		for _, batch := range batchCollection.Batches {
 			prompt, _ := batch.BuildPrompt()
-			// Simulate translation process
-			translatedText := s.openaiService.Translate(ctx, prompt)
-			decodedText := batch.UnmarshalResponse(translatedText)
+			translatedText, err := s.openaiService.Translate(ctx, prompt)
+			if err != nil {
+				// fail fast if any translation fails
+				return nil, err
+			}
+			decodedText, err := batch.UnmarshalResponse(translatedText)
+			if err != nil {
+				// fail fast if any unmarshaling fails
+				return nil, err
+			}
 			batch.MapTranslations(decodedText)
 		}
 
 		// reconstruct original transcriptions from the batches
 		resultTranscription := batchCollection.ReconstructOriginalTranscriptions()
 		for _, transcription := range resultTranscription {
-			resultDTOs = append(resultDTOs, MapTranscriptionToDTO(transcription))
+			resultDTOs = append(resultDTOs, mapper.MapTranscriptionToDTO(transcription))
 			// Add the new transcriptions to the repository
-			record := MapTranscriptionToRecord(transcription)
+			record := mapper.MapTranscriptionToRecord(transcription)
 			s.transRepo.Create(ctx, record)
 		}
 	}
