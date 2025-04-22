@@ -4,6 +4,7 @@ import (
 	"context"
 	mapper "translator/mappers"
 	model "translator/models"
+	"translator/utils"
 )
 
 type TranslateClient interface {
@@ -73,15 +74,21 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 		batchSize := s.translateClient.GetBatchSize()
 		batchCollection := NewBatchCollection(batchSize, transcriptionSet.New)
 
-		// translate batches
+		prompts := []string{}
 		for _, batch := range batchCollection.Batches {
 			prompt, _ := batch.BuildPrompt()
-			translatedText, err := s.translateClient.Translate(ctx, prompt)
-			if err != nil {
-				// fail fast if any translation fails
-				return nil, err
-			}
-			decodedText, err := batch.UnmarshalResponse(translatedText)
+			prompts = append(prompts, prompt)
+		}
+		// translate all batches in parallel
+		promptResponses, err := utils.DoInParallelFailFast(ctx, prompts, s.translateClient.Translate)
+		if err != nil {
+			// error returned if any translation fails
+			return nil, err
+		}
+		// map the responses to the batches. They are in the same order as the prompts
+		// so we can use the index to map them to the correct batch
+		for i, batch := range batchCollection.Batches {
+			decodedText, err := batch.UnmarshalResponse(promptResponses[i])
 			if err != nil {
 				// fail fast if any unmarshaling fails
 				return nil, err
