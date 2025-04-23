@@ -25,7 +25,7 @@ func NewTranslateHandler(translateService ITranslateService) *TranslateHandler {
 
 func (h *TranslateHandler) GetAllTranslations(c *gin.Context) {
 	// Call the TranslateService to get all translations
-	translations, err := h.translateService.GetAll(c)
+	translations, err := h.translateService.GetAll(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,7 +45,7 @@ func (h *TranslateHandler) Translate(c *gin.Context) {
 	}
 
 	// Call the TranslateService to translate the inputs
-	result, err := h.translateService.Translate(c, inputs)
+	result, err := h.translateService.Translate(c.Request.Context(), inputs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

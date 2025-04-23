@@ -53,7 +53,7 @@ func (r *TranslationRepo) Get(ctx context.Context, hash string) (*model.Transcri
 			// If no rows were found, return an empty TranscriptionRecord and false
 			return nil, nil
 		}
-		panic(err.Error())
+		return nil, fmt.Errorf("failed to scan row: %w", err)
 	}
 	return &transcription, nil
 }
