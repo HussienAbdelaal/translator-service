@@ -166,7 +166,7 @@ Unit tests are provided for key components. To run the tests:
 go test ./...
 ```
 
-### Checklist
+## Checklist
 - [x] Implement OpenAI client that independently translate an array (slice) of strings.
 - [x] Group given transcriptions into batches of size `OPENAI_BATCH_SIZE` to avoid having a lot of small requests for small transcriptions.
 - [x] Split large transcriptions into smaller parts for efficient processing and reconstruct them after translation.
@@ -183,23 +183,26 @@ go test ./...
 - [x] Testing for key components.
 - [ ] Better error and debug logging with levels and log rotation.
 
-### Decisions
-#### GPT Model
+## Decisions
+### GPT Model
 GPT-4o Mini was chosen for its cost-effectiveness, offering strong Arabic-English translation at a fraction of the cost of larger models like GPT-4o. It's good for high-volume use cases. However, we can switch to different models like GPT-4o or GPT-3.5 Turbo if future requirements demand higher accuracy or speed.
 
-#### Batch size
+### Batch size
 The batch size is set to 3000 characters, we can calculate batch size by tokens instead but this an acceptable approximation.
 ~3000 character => ~1500 tokens assuming 2 characters per token.
 Also taking into consideration the additional tokens for the response. The request metadata should be minimal as we're only sending the text to be translated with the system prompt.
 This means approximately ~3000 tokens (assuming output tokens are also ~1500) for a request which is within limits and not too large to cause performance issues. 
 
-#### Hashing transcriptions
+### Hashing transcriptions
 For comparing _**same exact input**_ transcriptions to avoid re-translating them, we used sha256 hashing. This is a good trade-off where hash collisions are very rare and the hashing time is negligible compared to the translation time (we can use a faster hashing algorithm like md5 if we want to speed up the hashing process).
 This will help avoid comparing the transcriptions directly, which can be slow for large transcriptions.
 
-#### Database
+### Database
 PostgreSQL was chosen as we have a defined schema for the translations (no need for NoSQL) with efficient reads with indexing over the hash column, which is our primary key.
 
-#### Splitting and parallel execution
+### Splitting and parallel execution
 The splitting mechanism tests inside the `services/translate_test.go` can demonstrate the splitting and parallel execution of the translation process. The splitting is done using punctuation marks to avoid splitting words or ruining the meaning of the sentence. If no punctuation is found, the transcription will be sent as is. This introduces a performance penalty where we loop over the transcription to find the punctuation marks, but this is acceptable for the sake of accuracy.
 We can split by size for better performance on the account of context-awareness. For future improvements, we can use NLP to split transcriptions to handle non-punctuation cases with context preserved and avoid performance penalties.
+
+## Examples
+you can find example requests and response in [examples.md](./examples.md) file.
