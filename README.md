@@ -165,3 +165,37 @@ Unit tests are provided for key components. To run the tests:
 ```bash
 go test ./...
 ```
+
+### Checklist
+- [x] Implement OpenAI client that independently translate an array (slice) of strings.
+- [x] Group given transcriptions into batches of size `OPENAI_BATCH_SIZE` to avoid having a lot of small requests for small transcriptions.
+- [x] Split large transcriptions into smaller parts for efficient processing and reconstruct them after translation.
+- [x] Split transcriptions using punctuation marks to avoid splitting words or ruin the meaning of the sentence. If no punctuation is found, the transcription will be sent as is.
+- [ ] Split large transcriptions with no punctuation into smaller parts based on size to avoid sending large requests to OpenAI API.
+- [ ] Use NLP to split transcriptions to handle non-punctuation cases and avoid performance penalties (better approach).
+- [x] Implement a REST API using Gin framework.
+- [x] Deploy a PostgreSQL database on AWS using Terraform.
+- [x] Implement a PostgreSQL repository to store and retrieve translations instead of re-translating them.
+- [ ] Use NLP to avoid translating sentences that contain only English text.
+- [x] Translate batches concurrently using goroutines with fail-fast behavior to ignore failed requests.
+- [x] Handle request cancellation by using context to cancel requests to the OpenAI API or DB if the client request is canceled for any reason.
+- [ ] Rate limit incoming requests and limit the number of concurrent requests to OpenAI API per request.
+- [x] Testing for key components.
+- [ ] Better error and debug logging with levels and log rotation.
+
+### Decisions
+#### GPT Model
+GPT-4o Mini was chosen for its cost-effectiveness, offering strong Arabic-English translation at a fraction of the cost of larger models like GPT-4o. It's good for high-volume use cases. However, we can switch to different models like GPT-4o or GPT-3.5 Turbo if future requirements demand higher accuracy or speed.
+
+#### Batch size
+The batch size is set to 3000 characters, we can calculate batch size by tokens instead but this an acceptable approximation.
+~3000 character => ~1500 tokens assuming 2 characters per token.
+Also taking into consideration the additional tokens for the response. The request metadata should be minimal as we're only sending the text to be translated with the system prompt.
+This means approximately ~3000 tokens (assuming output tokens are also ~1500) for a request which is within limits and not too large to cause performance issues. 
+
+#### Hashing transcriptions
+For comparing _**same exact input**_ transcriptions to avoid re-translating them, we used sha256 hashing. This is a good trade-off where hash collisions are very rare and the hashing time is negligible compared to the translation time (we can use a faster hashing algorithm like md5 if we want to speed up the hashing process).
+This will help avoid comparing the transcriptions directly, which can be slow for large transcriptions.
+
+#### Database
+PostgreSQL was chosen as we have a defined schema for the translations (no need for NoSQL) with efficient reads with indexing over the hash column, which is our primary key.
