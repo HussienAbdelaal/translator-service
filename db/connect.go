@@ -8,11 +8,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type DBConfig interface {
+type IDBConfig interface {
 	GetDSN() string
 }
 
-func NewDBPool(config DBConfig) (*pgxpool.Pool, error) {
+func NewDBPool(config IDBConfig) (*pgxpool.Pool, error) {
 	dsn := config.GetDSN()
 	if dsn == "" {
 		return nil, fmt.Errorf("database dsn is required but not found in config")

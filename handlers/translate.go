@@ -8,16 +8,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type TranslateService interface {
+type ITranslateService interface {
 	GetAll(c context.Context) ([]model.TranscriptionRecord, error)
 	Translate(c context.Context, inputs []model.TranscriptionDTO) ([]model.TranscriptionDTO, error)
 }
 
 type TranslateHandler struct {
-	translateService TranslateService
+	translateService ITranslateService
 }
 
-func NewTranslateHandler(translateService TranslateService) *TranslateHandler {
+func NewTranslateHandler(translateService ITranslateService) *TranslateHandler {
 	return &TranslateHandler{
 		translateService: translateService,
 	}

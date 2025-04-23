@@ -7,23 +7,23 @@ import (
 	"translator/utils"
 )
 
-type TranslateClient interface {
+type ITranslateClient interface {
 	Translate(ctx context.Context, prompt string) (string, error)
 	GetBatchSize() int
 }
 
-type TranslateRepo interface {
+type ITranslateRepo interface {
 	Get(ctx context.Context, hash string) (*model.TranscriptionRecord, error)
 	Create(ctx context.Context, t model.TranscriptionRecord) error
 	GetAll(ctx context.Context) ([]model.TranscriptionRecord, error)
 }
 
 type TranslateService struct {
-	translateRepo   TranslateRepo
-	translateClient TranslateClient
+	translateRepo   ITranslateRepo
+	translateClient ITranslateClient
 }
 
-func NewTranslateService(translateRepo TranslateRepo, translateClient TranslateClient) *TranslateService {
+func NewTranslateService(translateRepo ITranslateRepo, translateClient ITranslateClient) *TranslateService {
 	return &TranslateService{
 		translateRepo:   translateRepo,
 		translateClient: translateClient,

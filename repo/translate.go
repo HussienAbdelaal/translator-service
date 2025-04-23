@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type DBPool interface {
+type IDBPool interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgxV5.Row
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 	Query(ctx context.Context, sql string, args ...any) (pgxV5.Rows, error)
@@ -17,10 +17,10 @@ type DBPool interface {
 }
 
 type TranslationRepo struct {
-	db DBPool
+	db IDBPool
 }
 
-func NewTranslationRepo(db DBPool) *TranslationRepo {
+func NewTranslationRepo(db IDBPool) *TranslationRepo {
 	return &TranslationRepo{
 		db: db,
 	}
