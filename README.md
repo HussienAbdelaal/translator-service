@@ -199,3 +199,7 @@ This will help avoid comparing the transcriptions directly, which can be slow fo
 
 #### Database
 PostgreSQL was chosen as we have a defined schema for the translations (no need for NoSQL) with efficient reads with indexing over the hash column, which is our primary key.
+
+#### Splitting and parallel execution
+The splitting mechanism tests inside the `services/translate_test.go` can demonstrate the splitting and parallel execution of the translation process. The splitting is done using punctuation marks to avoid splitting words or ruining the meaning of the sentence. If no punctuation is found, the transcription will be sent as is. This introduces a performance penalty where we loop over the transcription to find the punctuation marks, but this is acceptable for the sake of accuracy.
+We can split by size for better performance on the account of context-awareness. For future improvements, we can use NLP to split transcriptions to handle non-punctuation cases with context preserved and avoid performance penalties.
