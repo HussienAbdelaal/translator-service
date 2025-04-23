@@ -41,8 +41,10 @@ func (s *TranslateService) GetAll(ctx context.Context) ([]model.TranscriptionRec
 
 func (s *TranslateService) Translate(ctx context.Context, inputs []model.TranscriptionDTO) ([]model.TranscriptionDTO, error) {
 	transcriptionSet := model.TranscriptionSet{}
-	for _, input := range inputs {
+	inputOrderMap := make(map[string]int) // Map to track the input order
+	for index, input := range inputs {
 		transcription := *model.NewTranscription(input.Sentence, input.Speaker, input.Time)
+		inputOrderMap[transcription.Hash] = index // Store the input order using the hash
 		// check which transcriptions already exists
 		existingTranscription, err := s.translateRepo.Get(ctx, transcription.Hash)
 		if err != nil {
@@ -58,13 +60,14 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 		}
 	}
 
-	resultDTOs := []model.TranscriptionDTO{}
+	resultDTOs := make([]model.TranscriptionDTO, len(inputs)) // Preallocate result slice
 
 	if len(transcriptionSet.Existing) > 0 {
 		// If there are existing transcriptions, add them to the result
 		for _, transcription := range transcriptionSet.Existing {
 			dto := mapper.MapTranscriptionToDTO(transcription)
-			resultDTOs = append(resultDTOs, dto)
+			// Place the DTO in the correct order
+			resultDTOs[inputOrderMap[transcription.Hash]] = dto
 		}
 	}
 
@@ -99,11 +102,14 @@ func (s *TranslateService) Translate(ctx context.Context, inputs []model.Transcr
 		// reconstruct original transcriptions from the batches
 		resultTranscription := batchCollection.ReconstructOriginalTranscriptions()
 		for _, transcription := range resultTranscription {
-			resultDTOs = append(resultDTOs, mapper.MapTranscriptionToDTO(transcription))
+			dto := mapper.MapTranscriptionToDTO(transcription)
+			// Place the DTO in the correct order
+			resultDTOs[inputOrderMap[transcription.Hash]] = dto
 			// Add the new transcriptions to the repository
 			record := mapper.MapTranscriptionToRecord(transcription)
 			s.translateRepo.Create(ctx, record)
 		}
 	}
+
 	return resultDTOs, nil
 }
