@@ -40,76 +40,92 @@ func (s *TranslateService) GetAll(ctx context.Context) ([]model.TranscriptionRec
 }
 
 func (s *TranslateService) Translate(ctx context.Context, inputs []model.TranscriptionDTO) ([]model.TranscriptionDTO, error) {
-	transcriptionSet := model.TranscriptionSet{}
-	inputOrderMap := make(map[string]int) // Map to track the input order
-	for index, input := range inputs {
-		transcription := *model.NewTranscription(input.Sentence, input.Speaker, input.Time)
-		inputOrderMap[transcription.Hash] = index // Store the input order using the hash
-		// check which transcriptions already exists
-		existingTranscription, err := s.translateRepo.Get(ctx, transcription.Hash)
-		if err != nil {
-			return nil, err
-		}
-		if existingTranscription != nil {
-			// if exists, add the existing transcription
-			transcription.Translation = existingTranscription.Translation
-			transcriptionSet.Existing = append(transcriptionSet.Existing, transcription)
-		} else {
-			// if not, add the new transcription
-			transcriptionSet.New = append(transcriptionSet.New, transcription)
-		}
+	transcriptionSet, inputOrderMap, err := s.classifyTranscriptions(ctx, inputs)
+	if err != nil {
+		return nil, err
 	}
 
 	resultDTOs := make([]model.TranscriptionDTO, len(inputs)) // Preallocate result slice
 
-	if len(transcriptionSet.Existing) > 0 {
-		// If there are existing transcriptions, add them to the result
-		for _, transcription := range transcriptionSet.Existing {
-			dto := mapper.MapTranscriptionToDTO(transcription)
-			// Place the DTO in the correct order
-			resultDTOs[inputOrderMap[transcription.Hash]] = dto
-		}
-	}
+	s.insertExistingTranscriptions(transcriptionSet.Existing, resultDTOs, inputOrderMap)
 
 	// If there are new transcriptions, process them
 	if len(transcriptionSet.New) > 0 {
-		// Create a batch collection from the new transcriptions
-		batchSize := s.translateClient.GetBatchSize()
-		batchCollection := NewBatchCollection(batchSize, transcriptionSet.New)
-
-		prompts := []string{}
-		for _, batch := range batchCollection.Batches {
-			prompt, _ := batch.BuildPrompt()
-			prompts = append(prompts, prompt)
-		}
-		// translate all batches in parallel
-		promptResponses, err := utils.DoInParallelFailFast(ctx, prompts, s.translateClient.Translate)
-		if err != nil {
-			// error returned if any translation fails
+		if err := s.translateNewTranscriptions(ctx, transcriptionSet.New, resultDTOs, inputOrderMap); err != nil {
 			return nil, err
-		}
-		// map the responses to the batches. They are in the same order as the prompts
-		// so we can use the index to map them to the correct batch
-		for i, batch := range batchCollection.Batches {
-			decodedText, err := batch.UnmarshalResponse(promptResponses[i])
-			if err != nil {
-				// fail fast if any unmarshaling fails
-				return nil, err
-			}
-			batch.MapTranslations(decodedText)
-		}
-
-		// reconstruct original transcriptions from the batches
-		resultTranscription := batchCollection.ReconstructOriginalTranscriptions()
-		for _, transcription := range resultTranscription {
-			dto := mapper.MapTranscriptionToDTO(transcription)
-			// Place the DTO in the correct order
-			resultDTOs[inputOrderMap[transcription.Hash]] = dto
-			// Add the new transcriptions to the repository
-			record := mapper.MapTranscriptionToRecord(transcription)
-			s.translateRepo.Create(ctx, record)
 		}
 	}
 
 	return resultDTOs, nil
+}
+
+func (s *TranslateService) classifyTranscriptions(ctx context.Context, inputs []model.TranscriptionDTO) (model.TranscriptionSet, map[string]int, error) {
+	transcriptionSet := model.TranscriptionSet{}
+	inputOrderMap := make(map[string]int)
+
+	for index, input := range inputs {
+		transcription := *model.NewTranscription(input.Sentence, input.Speaker, input.Time)
+		inputOrderMap[transcription.Hash] = index
+
+		existing, err := s.translateRepo.Get(ctx, transcription.Hash)
+		if err != nil {
+			return model.TranscriptionSet{}, nil, err
+		}
+
+		if existing != nil {
+			transcription.Translation = existing.Translation
+			transcriptionSet.Existing = append(transcriptionSet.Existing, transcription)
+		} else {
+			transcriptionSet.New = append(transcriptionSet.New, transcription)
+		}
+	}
+
+	return transcriptionSet, inputOrderMap, nil
+}
+
+func (s *TranslateService) insertExistingTranscriptions(existing []model.Transcription, resultDTOs []model.TranscriptionDTO, inputOrderMap map[string]int) {
+	for _, transcription := range existing {
+		dto := mapper.MapTranscriptionToDTO(transcription)
+		resultDTOs[inputOrderMap[transcription.Hash]] = dto
+	}
+}
+
+func (s *TranslateService) translateNewTranscriptions(
+	ctx context.Context,
+	newTranscriptions []model.Transcription,
+	resultDTOs []model.TranscriptionDTO,
+	inputOrderMap map[string]int,
+) error {
+	batchSize := s.translateClient.GetBatchSize()
+	batchCollection := NewBatchCollection(batchSize, newTranscriptions)
+
+	prompts := make([]string, len(batchCollection.Batches))
+	for i, batch := range batchCollection.Batches {
+		prompt, _ := batch.BuildPrompt()
+		prompts[i] = prompt
+	}
+
+	responses, err := utils.DoInParallelFailFast(ctx, prompts, s.translateClient.Translate)
+	if err != nil {
+		return err
+	}
+
+	for i, batch := range batchCollection.Batches {
+		decoded, err := batch.UnmarshalResponse(responses[i])
+		if err != nil {
+			return err
+		}
+		batch.MapTranslations(decoded)
+	}
+
+	reconstructed := batchCollection.ReconstructOriginalTranscriptions()
+	for _, t := range reconstructed {
+		dto := mapper.MapTranscriptionToDTO(t)
+		resultDTOs[inputOrderMap[t.Hash]] = dto
+
+		record := mapper.MapTranscriptionToRecord(t)
+		s.translateRepo.Create(ctx, record)
+	}
+
+	return nil
 }
